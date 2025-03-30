@@ -4,7 +4,6 @@ import sys
 import os
 import argparse
 import re
-import time
 
 # 1MB buffer size
 BUFFER_SIZE = 1000000
@@ -66,7 +65,10 @@ while True:
   # Get HTTP request from client
   # and store it in the variable: message_bytes
   # ~~~~ INSERT CODE ~~~~
-  message_bytes = clientSocket.recv(BUFFER_SIZE) # read incoming HTTP request from client into message_bytes
+  try:
+    message_bytes = clientSocket.recv(BUFFER_SIZE) # read incoming HTTP request from client into message_bytes
+  except:
+    print('Failed recieving message.')
   # ~~~~ END CODE INSERT ~~~~
   message = message_bytes.decode('utf-8')
   print ('Received request:')
@@ -119,11 +121,8 @@ while True:
     # ProxyServer finds a cache hit
     # Send back response to client 
     # ~~~~ INSERT CODE ~~~~
-    cacheData = cacheFile.readlines()
-    clientSocket.sendall("HTTP/1.1 200 OK\r\n".encode())
-    clientSocket.sendall("Content-Type: text/html\r\n\r\n".encode())
-    for line in cacheData:
-      clientSocket.sendall(line.encode())
+    response = "".join(cacheData)
+    clientSocket.sendall(response.encode('utf-8'))
     # ~~~~ END CODE INSERT ~~~~
     cacheFile.close()
     print ('Sent to the client:')
@@ -147,15 +146,18 @@ while True:
       # ~~~~ END CODE INSERT ~~~~
       print ('Connected to origin Server')
 
-      originServerRequest = ''
-      originServerRequestHeader = ''
+      originServerRequest = f'{method} {resource} {version}\r\n'
+      originServerRequestHeader = f'Host: {hostname}\r\n'
+      originServerRequestHeader += 'Connection: close\r\n' # close connection
+      originServerRequestHeader += 'User-Agent: PythonProxy/1.0\r\n' # User-Agent string
+      originServerRequestHeader += 'Accept: */*\r\n' # accept all types of responses
+      
       # Create origin server request line and headers to send
       # and store in originServerRequestHeader and originServerRequest
       # originServerRequest is the first line in the request and
       # originServerRequestHeader is the second line in the request
       # ~~~~ INSERT CODE ~~~~
-      originServerRequest = f"GET {resource} HTTP/1.1"
-      originServerRequestHeader = f"Host: {hostname}\r\nConnection: close" # construct and send http request
+      originServerRequest += originServerRequestHeader
       # ~~~~ END CODE INSERT ~~~~
 
       # Construct the request to send to the origin server
@@ -184,77 +186,15 @@ while True:
         response_data += chunk
       # ~~~~ END CODE INSERT ~~~~
 
-      status_line = response_data.split(b"\r\n")[0].decode() # extract status line
-      status_code = int(status_line.split()[1]) # Get HTTP status code
-
-      # Check if response is a redirect (301 or 302)
-      if status_code in (301, 302): # if redirect noticed
-        headers = response_data.decode().split("\r\n")
-        redirect_url = None
-        for header in headers:
-          if header.lower().startswith("location:"):
-            redirect_url = header.split(": ", 1)[1]
-            break
-        
-        if redirect_url:
-          print(f"Redirected to: {redirect_url}")
-
-          if status_code == 301: # Permanent redirct 
-            with open(cacheLocation, "w") as cacheFile:
-              cacheFile.write(f"REDIRECT {redirect_url}")
-
-          clientSocket.sendall(response_data) # send the redirect response to client 
-          originServerSocket.close()
-          sys.exit() # stop further processing
-      # End Code
-
-      # Check for Cache-Control max-age
-      cache_age = None
-      cache_timestamp = None
-      headers = response_data.decode().split("\r\n")
-      for header in headers:
-        if header.lower().startswith("cache-control:"):
-          cache_control = header.split(": ", 1)[1]
-          if "max-age" in cache_control:
-            cache_age = int(re.search(r"max-age=(\d+)", cache_control).group(1))
-            print(f"Cache-Control max-age found: {cache_age} seconds")
-            break
-
-      if cache_age:
-        # store current timestamp during resource caching
-        cache_timestamp = time.time()
-
       # Send the response to the client
       # ~~~~ INSERT CODE ~~~~
-      clientSocket.sendall(response_data) # Send received data back to client
+      try:
+        clientSocket.sendall(response_data) # Send received data back to client
+        print('Response forwarded to client')
+      except socket.error:
+        print('Failed to forward response to client')
+        sys.exit()
       # ~~~~ END CODE INSERT ~~~~
-
-      # Create a new file in the cache for the requested resource (if not redirect)
-      if status_code not in (301, 302): #Only cache if its not a redirect
-        cacheDir, file = os.path.split(cacheLocation)
-        if not os.path.exists(cacheDir):
-          os.makedirs(cacheDir)
-        with open(cacheLocation, 'wb') as cacheFile:
-          cacheFile.write(response_data)
-          print('Cached response to file.')
-
-        # save cache timestamp if max-age is present
-        if cache_age:
-          with open(f"{cacheLocation}.timestamp", 'w') as timestampFile:
-            timestampFile.write(str(cache_timestamp))
-          print(f"Cached with timestamp: {cache_timestamp}")
-
-      # check if the cache is still valid based on max-age
-      if cache_timestamp:
-        current_time = time.time()
-        if current_time - cache_timestamp > cache_age:
-          print(f"Cache expired for {cacheLocation}, removing...")
-          os.remove(cacheLocation)
-          os.remove(f"{cacheLocation}.timestamp")
-
-    except socket.error as e:
-      print('Error connecting to origin server: ', e)
-      sys.exit()
 
       # Create a new file in the cache for the requested file.
       cacheDir, file = os.path.split(cacheLocation)
