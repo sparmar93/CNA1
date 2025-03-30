@@ -229,6 +229,38 @@ while True:
       clientSocket.sendall(response_data) # Send received data back to client
       # ~~~~ END CODE INSERT ~~~~
 
+      # Create a new file in the cache for the requested resource (if not redirect)
+      if status_code not in (301, 302): #Only cache if its not a redirect
+        cacheDir, file = os.path.split(cacheLocation)
+        if not os.path.exists(cacheDir):
+          os.makedirs(cacheDir)
+        with open(cacheLocation, 'wb') as cacheFile:
+          cacheFile.write(response_data)
+          print('Cached response to file.')
+
+        # save cache timestamp if max-age is present
+        if cache_age:
+          with open(f"{cacheLocation}.timestamp", 'w') as timestampFile:
+            timestampFile.write(str(cache_timestamp))
+          print(f"Cached with timestamp: {cache_timestamp}")
+
+      # check if the cache is still valid based on max-age
+      if cache_timestamp:
+        current_time = time.time()
+        if current_time - cache_timestamp > cache_age:
+          print(f"Cache expired for {cacheLocation}, removing...")
+          os.remove(cacheLocation)
+          os.remove(f"{cacheLocation}.timestamp")
+
+    except socket.error as e:
+      print('Error connecting to origin server: ', e)
+      sys.exit()
+  finally:
+      # close client and origin server sockets
+      clientSocket.close()
+      originServerSocket.close()
+      print ('Connection closed\n')
+
       # Create a new file in the cache for the requested file.
       cacheDir, file = os.path.split(cacheLocation)
       print ('cached directory ' + cacheDir)
