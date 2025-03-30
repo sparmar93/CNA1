@@ -255,11 +255,6 @@ while True:
     except socket.error as e:
       print('Error connecting to origin server: ', e)
       sys.exit()
-  finally:
-      # close client and origin server sockets
-      clientSocket.close()
-      originServerSocket.close()
-      print ('Connection closed\n')
 
       # Create a new file in the cache for the requested file.
       cacheDir, file = os.path.split(cacheLocation)
