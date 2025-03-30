@@ -133,7 +133,7 @@ while True:
     # Create a socket to connect to origin server
     # and store in originServerSocket
     # ~~~~ INSERT CODE ~~~~
-
+    originServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # create new socket for origin server
     # ~~~~ END CODE INSERT ~~~~
 
     print ('Connecting to:\t\t' + hostname + '\n')
@@ -142,7 +142,7 @@ while True:
       address = socket.gethostbyname(hostname)
       # Connect to the origin server
       # ~~~~ INSERT CODE ~~~~
-
+      originServerSocket.connect((address, 80)) # connect to orgin server which is on port 80
       # ~~~~ END CODE INSERT ~~~~
       print ('Connected to origin Server')
 
@@ -153,6 +153,8 @@ while True:
       # originServerRequest is the first line in the request and
       # originServerRequestHeader is the second line in the request
       # ~~~~ INSERT CODE ~~~~
+      originServerRequest = f"GET {resource} HTTP/1/1"
+      originServerRequestHeader = f"Host: {hostname}\r\nConnection: close" # construct and send http request
       # ~~~~ END CODE INSERT ~~~~
 
       # Construct the request to send to the origin server
