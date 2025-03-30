@@ -4,6 +4,7 @@ import sys
 import os
 import argparse
 import re
+import time
 
 # 1MB buffer size
 BUFFER_SIZE = 1000000
@@ -206,6 +207,22 @@ while True:
           originServerSocket.close()
           sys.exit() # stop further processing
       # End Code
+
+      # Check for Cache-Control max-age
+      cache_age = None
+      cache_timestamp = None
+      headers = response_data.decode().split("\r\n")
+      for header in headers:
+        if header.lower().startswith("cache-control:"):
+          cache_control = header.split(": ", 1)[1]
+          if "max-age" in cache_control:
+            cache_age = int(re.search(r"max-age=(\d+)", cache_control).group(1))
+            print(f"Cache-Control max-age found: {cache_age} seconds")
+            break
+
+      if cache_age:
+        # store current timestamp during resource caching
+        cache_timestamp = time.time()
 
       # Send the response to the client
       # ~~~~ INSERT CODE ~~~~
