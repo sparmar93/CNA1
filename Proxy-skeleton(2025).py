@@ -55,6 +55,7 @@ while True:
   # Accept connection from client and store in the clientSocket
   try:
     # ~~~~ INSERT CODE ~~~~
+    clientSocket, clientAddress = serverSocket.accept() # store incoming client connection after accepting
     # ~~~~ END CODE INSERT ~~~~
     print ('Received a connection')
   except:
@@ -64,6 +65,7 @@ while True:
   # Get HTTP request from client
   # and store it in the variable: message_bytes
   # ~~~~ INSERT CODE ~~~~
+  message_bytes = clientSocket.recv(BUFFER_SIZE) # read incoming HTTP request from client into message_bytes
   # ~~~~ END CODE INSERT ~~~~
   message = message_bytes.decode('utf-8')
   print ('Received request:')
