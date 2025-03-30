@@ -175,10 +175,17 @@ while True:
 
       # Get the response from the origin server
       # ~~~~ INSERT CODE ~~~~
+      response_data = b"" # buffer for response
+      while True:
+        chunk = originServerSocket.recv(BUFFER_SIZE)
+        if not chunk:
+          break
+        response_data += chunk
       # ~~~~ END CODE INSERT ~~~~
 
       # Send the response to the client
       # ~~~~ INSERT CODE ~~~~
+      clientSocket.sendall(response_data) # Send received data back to client
       # ~~~~ END CODE INSERT ~~~~
 
       # Create a new file in the cache for the requested file.
@@ -190,6 +197,7 @@ while True:
 
       # Save origin server response in the cache file
       # ~~~~ INSERT CODE ~~~~
+      cacheFile.write(response_data) # Save response in cache for use next time
       # ~~~~ END CODE INSERT ~~~~
       cacheFile.close()
       print ('cache file closed')
