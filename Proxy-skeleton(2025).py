@@ -183,6 +183,30 @@ while True:
         response_data += chunk
       # ~~~~ END CODE INSERT ~~~~
 
+      status_line = response_data.split(b"\r\n")[0].decode() # extract status line
+      status_code = int(status_line.split()[1]) # Get HTTP status code
+
+      # Check if response is a redirect (301 or 302)
+      if status_code in (301, 302): # if redirect noticed
+        headers = response_data.decode().split("\r\n")
+        redirect_url = None
+        for header in headers:
+          if header.lower().startswith("location:"):
+            redirect_url = header.split(": ", 1)[1]
+            break
+        
+        if redirect_url:
+          print(f"Redirected to: {redirect_url}")
+
+          if status_code == 301: # Permanent redirct 
+            with open(cacheLocation, "w") as cacheFile:
+              cacheFile.write(f"REDIRECT {redirect_url}")
+
+          clientSocket.sendall(response_data) # send the redirect response to client 
+          originServerSocket.close()
+          sys.exit() # stop further processing
+      # End Code
+
       # Send the response to the client
       # ~~~~ INSERT CODE ~~~~
       clientSocket.sendall(response_data) # Send received data back to client
